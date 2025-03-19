@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+sp_prj1_tester/
+
+.idea/
