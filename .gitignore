@@ -34,3 +34,5 @@
 sp_prj1_tester/
 
 .idea/
+
+.clang-format
