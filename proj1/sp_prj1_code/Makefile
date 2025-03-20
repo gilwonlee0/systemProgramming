@@ -1,18 +1,20 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -g -O2
+OBJS = debug.o hex_dump.o list.o hash.o bitmap.o main.o
 
 TARGET = testlib
 
-# Default target
 all: $(TARGET)
 
-$(TARGET): main.o
-	$(CC) $(CFLAGS) -o $(TARGET) main.o
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET)
 
-main.o: main.c
-	$(CC) $(CFLAGS) -c main.c
+# Build object files
+%.o: %.c
+	$(CC) $(CFLAGS) $< -c
 
+.PHONY: all clean
 clean:
 	rm -f $(TARGET) *.o
 
-.PHONY: all clean
+-include $(OBJS:.o=.d)
