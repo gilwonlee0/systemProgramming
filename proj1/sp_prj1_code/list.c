@@ -1,5 +1,5 @@
 #include "list.h"
-#include <assert.h>	
+#include <assert.h>
 #define ASSERT(CONDITION) assert(CONDITION)	
 
 /* Our doubly linked lists have two header elements: the "head"
@@ -345,6 +345,16 @@ list_reverse (struct list *list)
     }
 }
 
+/* Simple wrapper using swap, which swaps the elements index  */
+void
+list_swap (struct list_elem *a, struct list_elem *b)
+{
+	swap(&a->prev->next, &b->prev->next);
+	swap(&a->prev, &b->prev);
+	swap(&a->next->prev, &b->next->prev);
+	swap(&a->next, &b->next);
+}
+
 /* Returns true only if the list elements A through B (exclusive)
    are in order according to LESS given auxiliary data AUX. */
 static bool
@@ -530,4 +540,36 @@ list_min (struct list *list, list_less_func *less, void *aux)
           min = e; 
     }
   return min;
+}
+
+void
+list_suffle(struct list *list){
+	int cnt = 3;
+	int size = (int) list_size (list);
+
+	int first, second;
+	struct list_elem *first_elem, *second_elem;
+	while (cnt--) {
+		first = rand() % size;
+		second = rand() % size;
+
+		// Ensure we always swap the different elements
+		while (first == second) second = rand() % size;
+
+		first_elem = list_begin (list);
+		second_elem = list_begin (list);
+
+		while (first--) first_elem = list_next (first_elem);
+		while (second--) second_elem = list_next (second_elem);
+
+		list_swap(first_elem, second_elem);
+	}
+}
+
+struct list_item*
+init_list_item(int data)
+{
+	struct list_item* item = malloc(sizeof(struct list_item));
+	item->data = data;
+	return item;
 }

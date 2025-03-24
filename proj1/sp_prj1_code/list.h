@@ -89,6 +89,13 @@ struct list_elem
     struct list_elem *next;     /* Next list element. */
   };
 
+/* List item. */
+struct list_item
+{
+	struct list_elem list_elem;
+	int data;
+};
+
 /* List. */
 struct list 
   {
@@ -141,6 +148,7 @@ bool list_empty (struct list *);
 
 /* Miscellaneous. */
 void list_reverse (struct list *);
+void list_swap(struct list_elem *a, struct list_elem *b);
 
 /* Compares the value of two list elements A and B, given
    auxiliary data AUX.  Returns true if A is less than B, or
@@ -156,9 +164,14 @@ void list_insert_ordered (struct list *, struct list_elem *,
                           list_less_func *, void *aux);
 void list_unique (struct list *, struct list *duplicates,
                   list_less_func *, void *aux);
+void list_suffle (struct list *);
 
 /* Max and min. */
 struct list_elem *list_max (struct list *, list_less_func *, void *aux);
 struct list_elem *list_min (struct list *, list_less_func *, void *aux);
+
+/* List Item. */
+struct list_item* init_list_item(int data);
+
 
 #endif /* list.h */
