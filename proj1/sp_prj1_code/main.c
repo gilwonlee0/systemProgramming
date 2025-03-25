@@ -4,9 +4,9 @@
 #include <string.h>
 #include <time.h>
 
+#include "bitmap.h"
 #include "list.h"
 #include "hash.h"
-#include "bitmap.h"
 
 #define MAX_BUFFER_SIZE 1024
 #define MAX_ARG_SIZE 32
@@ -20,8 +20,6 @@ bool QUIT = false;
 // Simple data structure manager
 struct list lists[MAX_STRUCTURE_COUNT];
 struct hash hashes[MAX_STRUCTURE_COUNT];
-
-// TODO: Include bitmap
 //struct bitmap bitmaps[MAX_STRUCTURE_COUNT];
 
 static inline bool
@@ -55,6 +53,22 @@ bool compare_elements(const struct list_elem *a, const struct list_elem *b, void
 	struct list_item *item_b = list_entry(b, struct list_item, list_elem);
 
 	return item_a->data < item_b->data;
+}
+
+unsigned hash_func(const struct hash_elem *e, void *aux) {
+	return hash_int(e->data);
+}
+
+void hash_square_apply(struct hash_elem *e, void *aux) {
+	e->data = e->data * e->data;
+}
+
+void hash_triple_apply(struct hash_elem *e, void *aux) {
+	e->data = e->data * e->data * e->data;
+}
+
+bool compare_hash_elements(const struct hash_elem *a, const struct hash_elem *b, void *aux) {
+	return a->data < b->data;
 }
 
 void shell_loop();
@@ -95,20 +109,24 @@ void execute_command_from_buffer(char* buffer) {
 		data_structure_index = get_ds_index(arg2);
 
 		if (strncmp(arg1, "list", 4) == 0) list_init (&lists[data_structure_index]);
-		else if (strncmp(arg1, "hashtable", 9) == 0) {}
+		else if (strncmp(arg1, "hashtable", 9) == 0) hash_init (&hashes[data_structure_index], hash_func, compare_hash_elements, NULL);
 		else if (strncmp(arg1, "bitmap", 6) == 0) {}
 	}
 
 	// Delete data strcuture
 	else if (is_command_equal(cmd, "delete")) {
 		if (strncmp(arg1, "list", 4) == 0) {}
-		else if (strncmp(arg1, "hash", 4)) {}
+		else if (strncmp(arg1, "hash", 4) == 0) {
+			data_structure_index = get_ds_index(arg1);
+			hash_destroy (&hashes[data_structure_index], NULL);
+		}
 		else if (strncmp(arg1, "bm", 2)) {}
 	}
 
 	// Show data structure
 	else if (is_command_equal(cmd, "dumpdata")) {
 		data_structure_index = get_ds_index(arg1);
+
 		if (strncmp(arg1, "list", 4) == 0) {
 			if (&lists[data_structure_index] != NULL) {
 				struct list_elem *e;
@@ -119,8 +137,17 @@ void execute_command_from_buffer(char* buffer) {
 				printf("\n");
 			}
 		}
-		else if (strncmp(arg1, "hash", 4)) {}
-		else if (strncmp(arg1, "bm", 2)) {}
+		else if (strncmp(arg1, "hash", 4) == 0) {
+			struct hash* h = &hashes[data_structure_index];
+			struct hash_iterator* i = malloc(sizeof(struct hash_iterator));
+
+			hash_first (i, h);
+			while (hash_next (i)) printf("%d ", hash_cur(i)->data);
+			printf("\n");
+
+			free(i);
+		}
+		else if (strncmp(arg1, "bm", 2) == 0) {}
 	}
 
 	// List related operations
@@ -161,7 +188,6 @@ void execute_command_from_buffer(char* buffer) {
 		}
 		else if (is_command_equal(cmd, "list_remove")) {
 			int index = atoi(arg2);
-			int data = atoi(arg3);
 
 			struct list_elem *e = list_begin (&lists[data_structure_index]);
 			while (index) {e = list_next (e); index--;}
@@ -251,7 +277,47 @@ void execute_command_from_buffer(char* buffer) {
 	}
 
 	// Hash related operations
-	else if (is_hash_command(cmd)) {}
+	else if (is_hash_command(cmd)) {
+		data_structure_index = get_ds_index(arg1);
+		struct hash* hash = &hashes[data_structure_index];
+
+		// Insert
+		if (is_command_equal(cmd, "hash_insert")) {
+			int data = atoi(arg2);
+			struct hash_elem* hash_elem = new_hash_elem(data);
+
+			hash_insert (hash, hash_elem);
+		}
+		// Delete
+		else if (is_command_equal(cmd, "hash_delete")) {
+			int data = atoi(arg2);
+
+			struct hash_elem* to_free = hash_delete (hash, new_hash_elem(data));
+			if (to_free) free(to_free);
+		}
+		// Replace
+		else if (is_command_equal(cmd, "hash_replace")) {
+			int data = atoi(arg2);
+			struct hash_elem* hash_elem = new_hash_elem(data);
+
+			hash_replace (hash, hash_elem);
+		}
+		// Find
+		else if (is_command_equal(cmd, "hash_find")) {
+			int data = atoi(arg2);
+
+			struct hash_elem* found = hash_find (hash, new_hash_elem(data));
+			if (found) printf("%d\n", found->data);
+		}
+		// Miscellaneous
+		else if (is_command_equal(cmd, "hash_apply")) {
+			if (is_command_equal(arg2, "square")) hash_apply (hash, hash_square_apply);
+			else if (is_command_equal(arg2, "triple")) hash_apply (hash, hash_triple_apply);
+		}
+		else if (is_command_equal(cmd, "hash_empty")) printf("%s\n", hash_empty (hash) ? "true" : "false");
+		else if (is_command_equal(cmd, "hash_size")) printf("%zu\n", hash_size (hash));
+		else if (is_command_equal(cmd, "hash_clear")) hash_clear (hash, NULL);
+	}
 
 	// Bitmap related operations
 	else if (is_bitmap_command(cmd)) {}
