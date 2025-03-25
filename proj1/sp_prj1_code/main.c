@@ -302,13 +302,14 @@ void execute_command_from_buffer(char* buffer) {
 
 			hash_replace (hash, hash_elem);
 		}
-		// find
+		// Find
 		else if (is_command_equal(cmd, "hash_find")) {
 			int data = atoi(arg2);
 
 			struct hash_elem* found = hash_find (hash, new_hash_elem(data));
 			if (found) printf("%d\n", found->data);
 		}
+		// Miscellaneous
 		else if (is_command_equal(cmd, "hash_apply")) {
 			if (is_command_equal(arg2, "square")) hash_apply (hash, hash_square_apply);
 			else if (is_command_equal(arg2, "triple")) hash_apply (hash, hash_triple_apply);

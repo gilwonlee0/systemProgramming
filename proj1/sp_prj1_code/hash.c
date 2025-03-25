@@ -63,7 +63,7 @@ hash_clear (struct hash *h, hash_action_func *destructor)
 {
   size_t i;
 
-  for (i = 0; i < h->bucket_cnt; i++) 
+  for (i = 0; i < h->bucket_cnt; i++)
     {
       struct list *bucket = &h->buckets[i];
 
