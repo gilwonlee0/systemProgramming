@@ -40,6 +40,15 @@ hash_init (struct hash *h,
     return false;
 }
 
+struct hash_elem *
+new_hash_elem (int data)
+{
+	struct hash_elem* elem = malloc(sizeof(struct hash_elem));
+	elem->data = data;
+
+	return elem;
+}
+
 /* Removes all the elements from H.
    
    If DESTRUCTOR is non-null, then it is called for each element
@@ -54,7 +63,7 @@ hash_clear (struct hash *h, hash_action_func *destructor)
 {
   size_t i;
 
-  for (i = 0; i < h->bucket_cnt; i++) 
+  for (i = 0; i < h->bucket_cnt; i++)
     {
       struct list *bucket = &h->buckets[i];
 
@@ -298,6 +307,13 @@ unsigned
 hash_int (int i) 
 {
   return hash_bytes (&i, sizeof i);
+}
+
+// TODO: Implement my own
+unsigned
+hash_int2 (int i)
+{
+  return 1;
 }
 
 /* Returns the bucket in H that E belongs in. */
