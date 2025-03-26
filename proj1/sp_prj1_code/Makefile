@@ -15,6 +15,6 @@ $(TARGET): $(OBJS)
 
 .PHONY: all clean
 clean:
-	rm -f $(TARGET) *.o *.d
+	rm -f $(TARGET) *.o
 
 -include $(OBJS:.o=.d)
