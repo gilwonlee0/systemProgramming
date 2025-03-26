@@ -48,6 +48,11 @@ get_ds_index(char* arg) {
 	return atoi(&arg[strlen(arg) - 1]);
 }
 
+static inline bool
+parse_boolean(char* arg) {
+	return strncmp(arg, "true", 4) == 0;
+}
+
 bool compare_elements(const struct list_elem *a, const struct list_elem *b, void *aux) {
 	struct list_item *item_a = list_entry(a, struct list_item, list_elem);
 	struct list_item *item_b = list_entry(b, struct list_item, list_elem);
@@ -134,7 +139,10 @@ void execute_command_from_buffer(char* buffer) {
 			hash_destroy (hash, NULL);
 			free (hash);
 		}
-		else if (strncmp(arg1, "bm", 2) == 0) {}
+		else if (strncmp(arg1, "bm", 2) == 0) {
+			struct bitmap* bitmap = bitmaps[data_structure_index];
+			bitmap_destroy(bitmap);
+		}
 	}
 
 	// Show data structure
@@ -143,27 +151,23 @@ void execute_command_from_buffer(char* buffer) {
 
 		if (strncmp(arg1, "list", 4) == 0) {
 			struct list* list = lists[data_structure_index];
-			if (lists[data_structure_index] != NULL) {
-				struct list_elem *e;
-				for (e = list_begin (lists[data_structure_index]); e != list_end (lists[data_structure_index]); e = list_next (e)) {
-					struct list_item *i = list_entry (e, struct list_item, list_elem);
-					printf("%d ", i->data);
-				}
+			for (struct list_elem *e = list_begin (list); e != list_end (list); e = list_next (e)) {
+				struct list_item *i = list_entry (e, struct list_item, list_elem);
+				printf("%d ", i->data);
 			}
 		}
 		else if (strncmp(arg1, "hash", 4) == 0) {
-			struct hash* h = hashes[data_structure_index];
+			struct hash* hash = hashes[data_structure_index];
 			struct hash_iterator* i = malloc(sizeof(struct hash_iterator));
 
-			hash_first (i, h);
+			hash_first (i, hash);
 			while (hash_next (i)) printf("%d ", hash_cur(i)->data);
 
 			free(i);
 		}
 		else if (strncmp(arg1, "bm", 2) == 0) {
 			struct bitmap* bitmap = bitmaps[data_structure_index];
-//			size_t i;
-//			for (i = 0; i < bitmap->bit_cnt; i++) printf("%d", bitmap->bits[elem_idx (i)]);
+			for (size_t i = 0; i < bitmap_size(bitmap); i++) printf("%d", bitmap_test(bitmap, i) ? 1 : 0);
 		}
 		printf("\n");
 	}
@@ -336,7 +340,109 @@ void execute_command_from_buffer(char* buffer) {
 	}
 
 	// Bitmap related operations
-	else if (is_bitmap_command(cmd)) {}
+	else if (is_bitmap_command(cmd)) {
+		data_structure_index = get_ds_index(arg1);
+		struct bitmap* bitmap = bitmaps[data_structure_index];
+		size_t idx, cnt;
+
+		// Update
+		if (is_command_equal(cmd, "bitmap_mark")) {
+			idx = (size_t) atoi(arg2);
+
+			bitmap_mark (bitmap, idx);
+		}
+		else if (is_command_equal(cmd, "bitmap_set")) {
+			idx = (size_t) atoi(arg2);
+			bool value = parse_boolean(arg3);
+
+			bitmap_set (bitmap, idx, value);
+		}
+		else if (is_command_equal(cmd, "bitmap_set_multiple")) {
+			idx = (size_t) atoi(arg2);
+			cnt = (size_t) atoi(arg3);
+			bool value = parse_boolean(arg4);
+
+			bitmap_set_multiple (bitmap, idx, cnt, value);
+		}
+		else if (is_command_equal(cmd, "bitmap_set_all")) {
+			bool value = parse_boolean(arg2);
+
+			bitmap_set_all (bitmap, value);
+		}
+		else if (is_command_equal(cmd, "bitmap_reset")) {
+			idx = (size_t) atoi(arg2);
+			bitmap_reset (bitmap, idx);
+		}
+		else if (is_command_equal(cmd, "bitmap_flip")) {
+			idx = (size_t) atoi(arg2);
+			bitmap_flip (bitmap, idx);
+		}
+		else if (is_command_equal(cmd, "bitmap_scan_and_flip")) {
+			idx = (size_t) atoi(arg2);
+			cnt = (size_t) atoi(arg3);
+			bool value = parse_boolean(arg4);
+
+			size_t scanned_idx = bitmap_scan_and_flip (bitmap, idx, cnt, value);
+			printf("%zu\n", scanned_idx);
+		}
+		else if (is_command_equal(cmd, "bitmap_expand")) {
+			cnt = (size_t) atoi(arg2);
+			bitmap_expand (bitmap, cnt);
+		}
+		// Read
+		else if (is_command_equal(cmd, "bitmap_all")) {
+			idx = (size_t) atoi(arg2);
+			cnt = (size_t) atoi(arg3);
+			bool is_all = bitmap_all (bitmap, idx, cnt);
+			printf("%s\n", is_all ? "true" : "false");
+		}
+		else if (is_command_equal(cmd, "bitmap_any")) {
+			idx = (size_t) atoi(arg2);
+			cnt = (size_t) atoi(arg3);
+			bool is_any = bitmap_any (bitmap, idx, cnt);
+
+			printf("%s\n", is_any ? "true" : "false");
+		}
+		else if (is_command_equal(cmd, "bitmap_contains")) {
+			idx = (size_t) atoi(arg2);
+			cnt = (size_t) atoi(arg3);
+			bool value = parse_boolean(arg4);
+			bool is_contains = bitmap_contains (bitmap, idx, cnt, value);
+
+			printf("%s\n", is_contains ? "true" : "false");
+		}
+		else if (is_command_equal(cmd, "bitmap_none")) {
+			idx = (size_t) atoi(arg2);
+			cnt = (size_t) atoi(arg3);
+			bool is_none = bitmap_none (bitmap, idx, cnt);
+
+			printf("%s\n", is_none ? "true" : "false");
+		}
+		else if (is_command_equal(cmd, "bitmap_scan")) {
+			idx = (size_t) atoi(arg2);
+			cnt = (size_t) atoi(arg3);
+			bool value = parse_boolean(arg4);
+
+			size_t scanned_idx = bitmap_scan (bitmap, idx, cnt, value);
+			printf("%zu\n", scanned_idx);
+		}
+		else if (is_command_equal(cmd, "bitmap_test")) {
+			idx = (size_t) atoi(arg2);
+			bool is_set = bitmap_test (bitmap, idx);
+
+			printf("%s\n", is_set ? "true" : "false");
+		}
+		else if (is_command_equal(cmd, "bitmap_count")) {
+			idx = (size_t) atoi(arg2);
+			cnt = (size_t) atoi(arg3);
+			bool value = parse_boolean(arg4);
+			size_t bit_cnt = bitmap_count (bitmap, idx, cnt, value);
+
+			printf("%zu\n", bit_cnt);
+		}
+		else if (is_command_equal(cmd, "bitmap_size")) printf("%zu\n", bitmap_size (bitmap));
+		else if (is_command_equal(cmd, "bitmap_dump")) bitmap_dump(bitmap);
+	}
 	else {
 		printf("Unknown command: %s\n", buffer);
 		exit(1);

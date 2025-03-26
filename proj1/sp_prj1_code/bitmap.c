@@ -132,6 +132,18 @@ bitmap_destroy (struct bitmap *b)
     }
 }
 
+void
+bitmap_expand (struct bitmap *b, size_t bit_cnt)
+{
+	size_t last_idx = bitmap_size(b);
+	size_t new_bit_cnt = bitmap_size(b) + bit_cnt;
+
+	b->bit_cnt = new_bit_cnt;
+	b->bits = realloc (b->bits, byte_cnt (new_bit_cnt));
+
+	bitmap_set_multiple (b, last_idx, bit_cnt, false);
+}
+
 /* Bitmap size. */
 
 /* Returns the number of bits in B. */
