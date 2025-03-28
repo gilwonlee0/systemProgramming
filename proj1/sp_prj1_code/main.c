@@ -183,22 +183,22 @@ void execute_command_from_buffer(char* buffer) {
 			struct list_elem *e = list_begin (lists[data_structure_index]);
 			while (index) {e = list_next (e); index--;}
 
-			struct list_item* item_to_insert = init_list_item(data);
+			struct list_item* item_to_insert = new_list_item(data);
 			list_insert (e, &item_to_insert->list_elem);
 		}
 		else if (is_command_equal(cmd, "list_insert_ordered")) {
 			int data = atoi(arg2);
-			struct list_item* item_to_insert = init_list_item(data);
+			struct list_item* item_to_insert = new_list_item(data);
 			list_insert_ordered (lists[data_structure_index], &item_to_insert->list_elem, compare_elements, NULL);
 		}
 		else if (is_command_equal(cmd, "list_push_front")) {
 			int data = atoi(arg2);
-			struct list_item* item_to_insert = init_list_item(data);
+			struct list_item* item_to_insert = new_list_item(data);
 			list_push_front (lists[data_structure_index], &item_to_insert->list_elem);
 		}
 		else if (is_command_equal(cmd, "list_push_back")) {
 			int data = atoi(arg2);
-			struct list_item* item_to_insert = init_list_item(data);
+			struct list_item* item_to_insert = new_list_item(data);
 			list_push_back (lists[data_structure_index], &item_to_insert->list_elem);
 		}
 		// Remove

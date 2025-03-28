@@ -309,11 +309,18 @@ hash_int (int i)
   return hash_bytes (&i, sizeof i);
 }
 
-// TODO: Implement my own
 unsigned
 hash_int2 (int i)
 {
-  return 1;
+  unsigned hash = (unsigned) i;
+
+  hash ^= (hash >> 16);
+  hash *= 0x25a1ca10;
+  hash ^= (hash >> 13);
+  hash *= 0xf10af0d2;
+  hash ^= (hash >> 16);
+
+  return hash;
 }
 
 /* Returns the bucket in H that E belongs in. */

@@ -567,7 +567,7 @@ list_suffle(struct list *list){
 }
 
 struct list_item*
-init_list_item(int data)
+new_list_item(int data)
 {
 	struct list_item* item = malloc(sizeof(struct list_item));
 	item->data = data;
