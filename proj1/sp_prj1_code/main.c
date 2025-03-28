@@ -53,6 +53,32 @@ parse_boolean(char* arg) {
 	return strncmp(arg, "true", 4) == 0;
 }
 
+bool compare_elements(const struct list_elem *, const struct list_elem *, void *);
+unsigned hash_func(const struct hash_elem *, void *);
+void hash_square_apply(struct hash_elem *, void *);
+void hash_triple_apply(struct hash_elem *, void *);
+bool compare_hash_elements(const struct hash_elem *, const struct hash_elem *, void *);
+void execute_command_from_buffer(char*);
+void shell_loop();
+
+int main() {
+	srand(time(NULL));
+
+	shell_loop();
+	return 0;
+}
+
+void shell_loop() {
+	char buffer[MAX_BUFFER_SIZE];
+
+	while (!QUIT) {
+		fgets(buffer, MAX_BUFFER_SIZE, stdin);
+		execute_command_from_buffer(buffer);
+	}
+
+	return;
+}
+
 bool compare_elements(const struct list_elem *a, const struct list_elem *b, void *aux) {
 	struct list_item *item_a = list_entry(a, struct list_item, list_elem);
 	struct list_item *item_b = list_entry(b, struct list_item, list_elem);
@@ -76,26 +102,6 @@ bool compare_hash_elements(const struct hash_elem *a, const struct hash_elem *b,
 	return a->data < b->data;
 }
 
-void shell_loop();
-void execute_command_from_buffer(char* buffer);
-
-int main() {
-	srand(time(NULL));
-
-	shell_loop();
-	return 0;
-}
-
-void shell_loop() {
-	char buffer[MAX_BUFFER_SIZE];
-
-	while (!QUIT) {
-		fgets(buffer, MAX_BUFFER_SIZE, stdin);
-		execute_command_from_buffer(buffer);
-	}
-
-	return;
-}
 
 void execute_command_from_buffer(char* buffer) {
 	// Parse the buffer
