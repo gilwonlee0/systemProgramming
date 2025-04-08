@@ -1,16 +1,16 @@
-/* $begin shellmain */
 #include "csapp.h"
 #include <errno.h>
-#define MAXARGS   128
 
-/* Function prototypes */
+#define MAXARGS   128
+#define MAXBINPATH   512
+
 void eval(char *cmdline);
 int parseline(char *buf, char **argv);
 int builtin_command(char **argv);
 
 int main()
 {
-    char cmdline[MAXLINE]; /* Command line */
+    char cmdline[MAXLINE];
 
     while (1) {
 		printf("CSE4100-SP-P2> ");
@@ -31,38 +31,44 @@ void eval(char *cmdline)
 {
     char *argv[MAXARGS]; /* Argument list execve() */
     char buf[MAXLINE];   /* Holds modified command line */
-    int bg;              /* Should the job run in bg or fg? */
-    pid_t pid;           /* Process id */
+    int *iptr = malloc(sizeof(int));
+	pid_t pid;           /* Process id */
 
     strcpy(buf, cmdline);
-    bg = parseline(buf, argv);
-    if (argv[0] == NULL) return;   /* Ignore empty lines */
-    if (!builtin_command(argv)) { //quit -> exit(0), & -> ignore, other -> run
-        if (execve(argv[0], argv, environ) < 0) {	//ex) /bin/ls ls -al &
-            printf("%s: Command not found.\n", argv[0]);
-            exit(0);
-        }
 
-	/* Parent waits for foreground job to terminate */
-	if (!bg){
-	    int status;
+	// TODO: Support pipelining deliemeter '|' in phase2
+    parseline(buf, argv);
+    if (argv[0] == NULL) return;   /* Ignore empty lines */
+
+	// TODO: Proocess forking logic will be functionalized, in phase2 so to support pipelining
+	if (!builtin_command(argv)) {
+		if ((pid = Fork()) == 0) {
+			if (execvp(argv[0], argv) < 0) {	//ex) ls -al &
+	            printf("%s: Command not found.\n", argv[0]);
+	            exit(0);
+		    }
+		}
+
+		// TODO: Implement not to wait for bg command in phase3
+		// Parent, which is main shell
+		Waitpid(pid, iptr, WCONTINUED);
 	}
-	else//when there is backgrount process!
-	    printf("%d %s", pid, cmdline);
-    }
+
     return;
 }
+/* $end eval */
 
-/* If first arg is a builtin command, run it and return true */
+// Run a shell built-in commands, such as exit, cd - Specification 2.1
 int builtin_command(char **argv)
 {
-    if (!strcmp(argv[0], "quit")) /* quit command */
-	exit(0);
-    if (!strcmp(argv[0], "&"))    /* Ignore singleton & */
-	return 1;
+    if (!strcmp(argv[0], "&")) return 1;  /* Ignore singleton & */
+    if (!strcmp(argv[0], "exit")) exit(0);
+	if (!strcmp(argv[0], "cd")) {
+		if (chdir(argv[1]) == -1) printf("%s: No such file or directory.\n", argv[1]);
+		return 1;
+	}
     return 0;                     /* Not a builtin command */
 }
-/* $end eval */
 
 /* $begin parseline */
 /* parseline - Parse the command line and build the argv array */
@@ -79,11 +85,10 @@ int parseline(char *buf, char **argv)
     /* Build the argv list */
     argc = 0;
     while ((delim = strchr(buf, ' '))) {
-	argv[argc++] = buf;
-	*delim = '\0';
-	buf = delim + 1;
-	while (*buf && (*buf == ' ')) /* Ignore spaces */
-            buf++;
+		argv[argc++] = buf;
+		*delim = '\0';
+		buf = delim + 1;
+		while (*buf && (*buf == ' ')) buf++;  /* Ignore spaces */
     }
     argv[argc] = NULL;
 
@@ -97,5 +102,3 @@ int parseline(char *buf, char **argv)
     return bg;
 }
 /* $end parseline */
-
-
