@@ -1,16 +1,30 @@
 #include "csapp.h"
 #include <errno.h>
+#include <stdbool.h>
 
 #define MAXARGS   128
 #define MAXBINPATH   512
+#define MAXPIPES 10
+
+typedef struct Command {
+	char* argv[MAXARGS];
+} Command;
+
+typedef struct Pipeline {
+	Command commands[MAXPIPES];
+	int cmd_count;
+	// bool background;  	// TODO: Phase3 Background job parsing
+} Pipeline;
 
 void eval(char *cmdline);
-int parseline(char *buf, char **argv);
+void parse_single_command(char *buf, char **argv);
 int builtin_command(char **argv);
+Pipeline* parse_cmdline(char *cmdline);
+
 
 int main()
 {
-    char cmdline[MAXLINE];
+	char cmdline[MAXLINE];
 
     while (1) {
 		printf("CSE4100-SP-P2> ");
@@ -29,32 +43,59 @@ int main()
 /* eval - Evaluate a command line */
 void eval(char *cmdline)
 {
-    char *argv[MAXARGS]; /* Argument list execve() */
     char buf[MAXLINE];   /* Holds modified command line */
     int *iptr = malloc(sizeof(int));
 	pid_t pid;           /* Process id */
+	int pipes[MAXPIPES][2];
 
     strcpy(buf, cmdline);
 
-	// TODO: Support pipelining deliemeter '|' in phase2
-    parseline(buf, argv);
-    if (argv[0] == NULL) return;   /* Ignore empty lines */
+	// Skip empty lines
+	Pipeline* pipeline = parse_cmdline(buf);
+    if (pipeline->cmd_count == 0) {
+    	free(pipeline);
+	    return;
+    }
 
-	// TODO: Proocess forking logic will be functionalized, in phase2 so to support pipelining
-	if (!builtin_command(argv)) {
-		if ((pid = Fork()) == 0) {
-			if (execvp(argv[0], argv) < 0) {	//ex) ls -al &
-	            printf("%s: Command not found.\n", argv[0]);
-	            exit(0);
-		    }
+	// Init pipes
+	for (int i = 0; i < pipeline->cmd_count - 1; i++) {
+		if (pipe(pipes[i]) < 0) {
+			perror("pipe error");
+			exit(1);
 		}
-
-		// TODO: Implement not to wait for bg command in phase3
-		// Parent, which is main shell
-		Waitpid(pid, iptr, WCONTINUED);
 	}
 
-    return;
+	// Run command
+	for (int i = 0; i < pipeline->cmd_count; i++) {
+		if (!builtin_command(pipeline->commands[i].argv)) {
+			if ((pid = Fork()) == 0) {
+				if (i > 0) dup2(pipes[i-1][0], STDIN_FILENO);
+				if (i < pipeline->cmd_count - 1) dup2(pipes[i][1], STDOUT_FILENO);
+
+				for (int j = 0; j < pipeline->cmd_count - 1; j++) {
+					close(pipes[j][0]);
+					close(pipes[j][1]);
+				}
+
+				if (execvp(pipeline->commands[i].argv[0], pipeline->commands[i].argv) < 0) {
+		            printf("%s: Command not found.\n", pipeline->commands[i].argv[0]);
+		            exit(0);
+			    }
+			}
+		}
+	}
+
+	// Parent process clean-ups
+	for (int i = 0; i < pipeline->cmd_count - 1; i++) {
+		close(pipes[i][0]);
+		close(pipes[i][1]);
+	}
+
+	// TODO: Implement not to wait for bg command in phase3
+	// Parent, which is main shell
+	Waitpid(pid, iptr, 0);
+
+	free(pipeline);
 }
 /* $end eval */
 
@@ -67,38 +108,66 @@ int builtin_command(char **argv)
 		if (chdir(argv[1]) == -1) printf("%s: No such file or directory.\n", argv[1]);
 		return 1;
 	}
-    return 0;                     /* Not a builtin command */
+    return 0;  /* Not a builtin command */
+}
+
+Pipeline* parse_cmdline(char* cmdline) {
+	Pipeline* pipeline = malloc(sizeof(Pipeline));
+	pipeline->cmd_count = 0;
+
+	size_t len = strlen(cmdline);
+	if (len > 0 && cmdline[len-1] == '\n') cmdline[len-1] = ' ';
+
+	char* cmd_str = strtok(cmdline, "|");
+	while (cmd_str != NULL && pipeline->cmd_count < MAXPIPES) {
+		Command* cmd = &pipeline->commands[pipeline->cmd_count];
+		parse_single_command(cmd_str, cmd->argv);
+
+		if (cmd->argv[0] != NULL) pipeline->cmd_count++;
+		cmd_str = strtok(NULL, "|");
+	}
+
+	return pipeline;
 }
 
 /* $begin parseline */
 /* parseline - Parse the command line and build the argv array */
-int parseline(char *buf, char **argv)
+void parse_single_command(char *buf, char **argv)
 {
-    char *delim;         /* Points to first space delimiter */
     int argc;            /* Number of args */
-    int bg;              /* Background job? */
-
-    buf[strlen(buf)-1] = ' ';  /* Replace trailing '\n' with space */
-    while (*buf && (*buf == ' ')) /* Ignore leading spaces */
-	buf++;
+	while (*buf && (*buf == ' ')) buf++;  /* Ignore leading spaces */
 
     /* Build the argv list */
     argc = 0;
-    while ((delim = strchr(buf, ' '))) {
-		argv[argc++] = buf;
-		*delim = '\0';
-		buf = delim + 1;
-		while (*buf && (*buf == ' ')) buf++;  /* Ignore spaces */
+    while (*buf) {
+		char* start = buf;
+
+    	// Parse quoted string
+		if (*buf == '"' || *buf == '\'') {
+			char quote = *buf;
+			start = ++buf;
+
+			while (*buf && *buf != quote) buf++;
+
+			if (*buf == quote) {
+				*buf = '\0';
+				buf++;
+			}
+		}
+    	// Parse unquoted string
+		else {
+			while (*buf && *buf != ' ') buf++;
+
+			if (*buf == ' ') {
+				*buf = '\0';
+				buf++;
+			}
+		}
+
+    	argv[argc++] = strdup(start);
+
+    	while (*buf && (*buf == ' ')) buf++;  /* Ignore spaces */
     }
     argv[argc] = NULL;
-
-    if (argc == 0)  /* Ignore blank line */
-	return 1;
-
-    /* Should the job run in the background? */
-    if ((bg = (*argv[argc-1] == '&')) != 0)
-	argv[--argc] = NULL;
-
-    return bg;
 }
 /* $end parseline */
