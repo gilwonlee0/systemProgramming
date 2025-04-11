@@ -106,7 +106,7 @@ int builtin_command(char **argv)
     if (!strcmp(argv[0], "exit")) exit(0);
 	if (!strcmp(argv[0], "cd")) {
 		// Manually route to home directory without any argument
-		if (argv[1] == NULL) argv[1] = getenv("HOME");
+		if (argv[1] == NULL || !strcmp(argv[1], "~")) argv[1] = getenv("HOME");
 		if (chdir(argv[1]) == -1) printf("%s: No such file or directory.\n", argv[1]);
 		return 1;
 	}
