@@ -8,16 +8,18 @@
 
 typedef struct Command {
 	char* argv[MAXARGS];
+	int argc;
+	bool background;
 } Command;
 
 typedef struct Pipeline {
 	Command commands[MAXPIPES];
 	int cmd_count;
-	// bool background;  	// TODO: Phase3 Background job parsing
+	bool background;
 } Pipeline;
 
 void eval(char *cmdline);
-void parse_single_command(char *buf, char **argv);
+void parse_single_command(char *buf, Command* cmd);
 int builtin_command(char **argv);
 Pipeline* parse_cmdline(char *cmdline);
 
@@ -50,8 +52,9 @@ void eval(char *cmdline)
 
     strcpy(buf, cmdline);
 
-	// Skip empty lines
 	Pipeline* pipeline = parse_cmdline(buf);
+
+	// Skip empty lines
     if (pipeline->cmd_count == 0) {
     	free(pipeline);
 	    return;
@@ -91,11 +94,16 @@ void eval(char *cmdline)
 		close(pipes[i][1]);
 	}
 
-	// TODO: Implement not to wait for bg command in phase3
-	// Parent, which is main shell
-	if (pid != 0) Waitpid(pid, iptr, 0);
+	if (!pipeline->background) {
+		Waitpid(pid, iptr, 0);
+		free(pipeline);
 
-	free(pipeline);
+		// for (int i = 0; i < pipeline->cmd_count - 1; i++) {
+		// 	wait(NULL);
+		// }
+	}
+	else printf("[%d] %s ... &\n", pid, pipeline->commands[0].argv[0]);
+
 }
 /* $end eval */
 
@@ -110,6 +118,10 @@ int builtin_command(char **argv)
 		if (chdir(argv[1]) == -1) printf("%s: No such file or directory.\n", argv[1]);
 		return 1;
 	}
+	if (!strcmp(argv[0], "jobs")) {
+
+
+	}
     return 0;  /* Not a builtin command */
 }
 
@@ -118,14 +130,18 @@ Pipeline* parse_cmdline(char* cmdline) {
 	pipeline->cmd_count = 0;
 
 	size_t len = strlen(cmdline);
-	if (len > 0 && cmdline[len-1] == '\n') cmdline[len-1] = ' ';
+
+	// Remove new line
+	if (len > 0 && cmdline[len-1] == '\n') cmdline[len-1] = '\0';
 
 	char* cmd_str = strtok(cmdline, "|");
 	while (cmd_str != NULL && pipeline->cmd_count < MAXPIPES) {
 		Command* cmd = &pipeline->commands[pipeline->cmd_count];
-		parse_single_command(cmd_str, cmd->argv);
+		parse_single_command(cmd_str, cmd);
 
 		if (cmd->argv[0] != NULL) pipeline->cmd_count++;
+		if (cmd->background) pipeline->background = true;
+
 		cmd_str = strtok(NULL, "|");
 	}
 
@@ -134,7 +150,7 @@ Pipeline* parse_cmdline(char* cmdline) {
 
 /* $begin parseline */
 /* parseline - Parse the command line and build the argv array */
-void parse_single_command(char *buf, char **argv)
+void parse_single_command(char *buf, Command* cmd)
 {
     int argc;            /* Number of args */
 	while (*buf && (*buf == ' ')) buf++;  /* Ignore leading spaces */
@@ -166,10 +182,18 @@ void parse_single_command(char *buf, char **argv)
 			}
 		}
 
-    	argv[argc++] = strdup(start);
+    	cmd->argv[argc++] = strdup(start);
 
     	while (*buf && (*buf == ' ')) buf++;  /* Ignore spaces */
     }
-    argv[argc] = NULL;
+
+	cmd->background = false;
+	if (cmd->argv[argc-1][0] == '&') {
+		argc--;
+		cmd->background = true;
+	}
+
+	cmd->argv[argc] = NULL;
+	cmd->argc = argc;
 }
 /* $end parseline */
