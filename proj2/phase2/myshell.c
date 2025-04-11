@@ -45,7 +45,7 @@ void eval(char *cmdline)
 {
     char buf[MAXLINE];   /* Holds modified command line */
     int *iptr = malloc(sizeof(int));
-	pid_t pid;           /* Process id */
+	pid_t pid = 0;           /* Process id */
 	int pipes[MAXPIPES][2];
 
     strcpy(buf, cmdline);
@@ -93,7 +93,7 @@ void eval(char *cmdline)
 
 	// TODO: Implement not to wait for bg command in phase3
 	// Parent, which is main shell
-	Waitpid(pid, iptr, 0);
+	if (pid != 0) Waitpid(pid, iptr, 0);
 
 	free(pipeline);
 }
@@ -105,6 +105,8 @@ int builtin_command(char **argv)
     if (!strcmp(argv[0], "&")) return 1;  /* Ignore singleton & */
     if (!strcmp(argv[0], "exit")) exit(0);
 	if (!strcmp(argv[0], "cd")) {
+		// Manually route to home directory without any argument
+		if (argv[1] == NULL) argv[1] = getenv("HOME");
 		if (chdir(argv[1]) == -1) printf("%s: No such file or directory.\n", argv[1]);
 		return 1;
 	}
