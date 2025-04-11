@@ -118,10 +118,6 @@ int builtin_command(char **argv)
 		if (chdir(argv[1]) == -1) printf("%s: No such file or directory.\n", argv[1]);
 		return 1;
 	}
-	if (!strcmp(argv[0], "jobs")) {
-
-
-	}
     return 0;  /* Not a builtin command */
 }
 
