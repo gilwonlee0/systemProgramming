@@ -425,7 +425,7 @@ void builtin_bg(char* arg) {
 
 void builtin_kill(char* arg) {
 	if (arg == NULL || arg[0] != '%') {
-		printf("kill: usage: kill %[job_id]");
+		printf("kill: usage: kill %[job_id]\n");
 		return;
 	}
 
